@@ -238,8 +238,15 @@ class PhpModule implements ModuleInterface
     {
         // get response instance to local var reference
         $response = $this->getResponse();
+
+        // add x powered
+        $response->addHeader(HttpProtocol::HEADER_X_POWERED_BY, __CLASS__);
+
         // add this header to prevent .php request to be cached
         $response->addHeader(HttpProtocol::HEADER_EXPIRES, '19 Nov 1981 08:52:00 GMT');
+        $response->addHeader(HttpProtocol::HEADER_CACHE_CONTROL, 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0');
+        $response->addHeader(HttpProtocol::HEADER_PRAGMA, 'no-cache');
+
         // set per default text/html mimetype
         $response->addHeader(HttpProtocol::HEADER_CONTENT_TYPE, 'text/html');
         // grep headers and set to response object
