@@ -171,7 +171,9 @@ class PhpModule implements ModuleInterface
              * This is necessary because of seq faults if a non existing file will be required.
              */
             if (!file_exists($scriptFilename)) {
-                return;
+                // send 404
+                $response->setStatusCode(404);
+                throw new ModuleException(null, 404);
             }
 
             /**
