@@ -114,7 +114,7 @@ class PhpProcessThread extends \Thread
             // require script filename
             require $this->scriptFilename;
         } catch (\Exception $e) {
-            // echo uncought exceptions by default
+            // process uncought exceptions
             // todo: refactor this if pthreads can manage set_exception_handler.
             $this->lastError = array(
                 'message' => $e->getMessage(),
