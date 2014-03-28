@@ -230,9 +230,6 @@ class PhpModule implements ModuleInterface
 
             // set response state to be dispatched after this without calling other modules process
             $response->setState(HttpResponseStates::DISPATCH);
-
-
-            $response->addHeader('FLOW_CONTEXT', $serverContext->getServerVar('FLOW_CONTEXT'));
         }
     }
 
