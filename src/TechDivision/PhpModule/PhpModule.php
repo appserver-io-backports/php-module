@@ -206,10 +206,14 @@ class PhpModule implements ModuleInterface
             // is not responsible for set correct headers and messages for error's in module context
             if ($lastError = $process->getLastError()) {
                 // check if last error was a fatal one
-                if ($lastError['type'] === 1) {
-                    $errorMessage = 'PHP Fatal error: ' . $lastError['message'] .
-                        ' in ' . $lastError['file'] . ' on line ' . $lastError['line'];
-                    // set internal server error code with error mesage to exception
+                if ($lastError['type'] === E_ERROR) {
+                    // check if output buffer was set by the application executed by the php process
+                    // so do not override content by exception stack trace
+                    if (strlen($errorMessage = $process->getOutputBuffer()) === 0) {
+                        $errorMessage = 'PHP Fatal error: ' . $lastError['message'] .
+                            ' in ' . $lastError['file'] . ' on line ' . $lastError['line'];
+                    }
+                    // set internal server error code with error message to exception
                     throw new ModuleException($errorMessage, 500);
                 }
             }
@@ -333,6 +337,9 @@ class PhpModule implements ModuleInterface
         }
         // set files globals
         $globals->files = $this->initFileGlobals($request);
+
+        // set raw request
+        $globals->httpRawPostData = $request->getBodyContent();
     }
 
     /**

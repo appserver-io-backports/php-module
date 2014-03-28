@@ -83,6 +83,7 @@ class PhpProcessThread extends \Thread
     {
         // register shutdown handler
         register_shutdown_function(array(&$this, "shutdown"));
+
         // init globals to local var
         $globals = $this->globals;
 
@@ -96,6 +97,9 @@ class PhpProcessThread extends \Thread
         $_COOKIE = $globals->cookie;
         $_FILES = $globals->files;
 
+        // set http body content to this global var to be available for TYPO3 Neos
+        $HTTP_RAW_POST_DATA = $globals->httpRawPostData;
+
         // register uploaded files for thread process context internal hashmap
         foreach ($this->uploadedFiles as $uploadedFile) {
             appserver_register_file_upload($uploadedFile);
@@ -105,10 +109,21 @@ class PhpProcessThread extends \Thread
         chdir(dirname($this->scriptFilename));
         // reset headers sent
         appserver_set_headers_sent(false);
-        // require script filename
-        require $this->scriptFilename;
-        // save last error
-        $this->lastError = error_get_last();
+
+        try {
+            // require script filename
+            require $this->scriptFilename;
+        } catch (\Exception $e) {
+            // process uncought exceptions
+            // todo: refactor this if pthreads can manage set_exception_handler.
+            $this->lastError = array(
+                'message' => $e->getMessage(),
+                'type' => E_ERROR,
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            );
+        }
+
     }
 
     /**
@@ -118,18 +133,23 @@ class PhpProcessThread extends \Thread
      */
     public function shutdown()
     {
-        // save last error
-        $this->lastError = error_get_last();
+        // save last error if not exist
+        if (!$this->lastError) {
+            $this->lastError = error_get_last();
+        }
         // get php output buffer
         if (strlen($outputBuffer = ob_get_clean()) === 0) {
-            if ($this->lastError['type'] == 1) {
+            if ($this->lastError['type'] == E_ERROR) {
                 $errorMessage = 'PHP Fatal error: ' . $this->lastError['message'] .
                     ' in ' . $this->lastError['file'] . ' on line ' . $this->lastError['line'];
             }
             $outputBuffer = $errorMessage;
         }
+
+        // todo: read out status line
         // set headers set by script inclusion
         $this->headers = appserver_get_headers(true);
+
         // set output buffer set by script inclusion
         $this->outputBuffer = $outputBuffer;
     }
