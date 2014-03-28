@@ -7,5 +7,5 @@ php.ini
 /.buildpath
 /.project
 /.settings
-/.build.properties
-composer.lock
+/build.properties
+/composer.lock
