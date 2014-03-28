@@ -96,16 +96,9 @@ class PhpProcessThread extends \Thread
         $_GET = $globals->get;
         $_COOKIE = $globals->cookie;
         $_FILES = $globals->files;
-        //$GLOBALS['HTTP_RAW_POST_DATA'] = $globals->httpRawPostData;
-        $HTTP_RAW_POST_DATA = $globals->httpRawPostData;
 
-        $_SERVER['FLOW_SAPITYPE'] = 'appserver';
-        $_SERVER['FLOW_REWRITEURLS'] = '1';
-        $_SERVER['REDIRECT_FLOW_CONTEXT'] = $_SERVER['FLOW_CONTEXT'];
-        $_SERVER['REDIRECT_FLOW_SAPITYPE'] = $_SERVER['FLOW_SAPITYPE'];
-        $_SERVER['REDIRECT_FLOW_REWRITEURLS'] = $_SERVER['FLOW_REWRITEURLS'];
-        $_SERVER['REDIRECT_FLOW_ROOTPATH'] = $_SERVER['FLOW_ROOTPATH'];
-        // $_SERVER['REDIRECT_STATUS'] = $this->getServletConfig()->getInitParameter('redirectStatus');
+        // set http body content to this global var to be available for TYPO3 Neos
+        $HTTP_RAW_POST_DATA = $globals->httpRawPostData;
 
         // register uploaded files for thread process context internal hashmap
         foreach ($this->uploadedFiles as $uploadedFile) {
