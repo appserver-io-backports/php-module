@@ -117,8 +117,11 @@ class PhpProcessThread extends \Thread
         $_COOKIE = $globals->cookie;
         $_FILES = $globals->files;
 
-        // set http body content to this global var to be available for TYPO3 Neos
-        $HTTP_RAW_POST_DATA = $globals->httpRawPostData;
+        // check if http war post data is set
+        if (isset($globals->httpRawPostData)) {
+            // set raw post data to be available in php://input stream and $HTTP_RAW_POST_DATA var
+            appserver_set_raw_post_data($globals->httpRawPostData);
+        }
 
         // register uploaded files for thread process context internal hashmap
         foreach ($this->uploadedFiles as $uploadedFile) {
