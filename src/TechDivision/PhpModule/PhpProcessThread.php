@@ -61,6 +61,13 @@ class PhpProcessThread extends \Thread
     protected $uploadedFiles;
 
     /**
+     * Holds "global" variables which will be provided to the plain PHP environment
+     *
+     * @var array
+     */
+    protected $globals;
+
+    /**
      * Constructs the process
      *
      * @param string                             $scriptFilename The script filename to execute
@@ -91,6 +98,7 @@ class PhpProcessThread extends \Thread
         ob_start();
         // set globals
         $_SERVER = $globals->server;
+        $_ENV = $globals->env;
         $_REQUEST = $globals->request;
         $_POST = $globals->post;
         $_GET = $globals->get;
@@ -114,7 +122,7 @@ class PhpProcessThread extends \Thread
             // require script filename
             require $this->scriptFilename;
         } catch (\Exception $e) {
-            // process uncought exceptions
+            // process uncaught exceptions
             // todo: refactor this if pthreads can manage set_exception_handler.
             $this->lastError = array(
                 'message' => $e->getMessage(),
