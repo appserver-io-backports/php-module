@@ -318,6 +318,8 @@ class PhpModule implements ModuleInterface
         }
         // check if method post was given
         if ($request->getMethod() === HttpProtocol::METHOD_POST) {
+            // set raw request if post method is going on
+            $globals->httpRawPostData = $request->getBodyContent();
             // set params to post
             $globals->post = $request->getParams();
             $globals->get = array();
@@ -338,9 +340,6 @@ class PhpModule implements ModuleInterface
         }
         // set files globals
         $globals->files = $this->initFileGlobals($request);
-
-        // set raw request
-        $globals->httpRawPostData = $request->getBodyContent();
     }
 
     /**
