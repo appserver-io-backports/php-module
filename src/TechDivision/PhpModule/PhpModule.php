@@ -306,6 +306,7 @@ class PhpModule implements ModuleInterface
 
         // initialize the globals
         $globals->server = $this->getServerContext()->getServerVars();
+        $globals->env = $this->getServerContext()->getEnvVars();
         $globals->request = $request->getParams();
 
         // init post / get. default init vars as GET method case
