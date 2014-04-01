@@ -219,9 +219,7 @@ class PhpModule implements ModuleInterface
             }
 
             // prepare response
-            $this->prepareResponse(
-                $process->getHeaders()
-            );
+            $this->prepareResponse($process);
 
             // store the file's contents in the response
             $response->appendBodyStream(
@@ -236,17 +234,22 @@ class PhpModule implements ModuleInterface
     /**
      * Prepares the response instance for delivery
      *
-     * @param array $headers The headers to prepare
+     * @param \TechDivision\PhpModule\PhpProcessThread $process The process to prepare response for
      *
      * @return void
      */
-    public function prepareResponse($headers)
+    public function prepareResponse($process)
     {
         // get response instance to local var reference
         $response = $this->getResponse();
 
         // add x powered
         $response->addHeader(HttpProtocol::HEADER_X_POWERED_BY, __CLASS__);
+
+        // read out status code and set if exists
+        if ($responseCode = $process->getHttpResponseCode()) {
+            $response->setStatusCode($responseCode);
+        }
 
         // add this header to prevent .php request to be cached
         $response->addHeader(HttpProtocol::HEADER_EXPIRES, '19 Nov 1981 08:52:00 GMT');
@@ -256,7 +259,7 @@ class PhpModule implements ModuleInterface
         // set per default text/html mimetype
         $response->addHeader(HttpProtocol::HEADER_CONTENT_TYPE, 'text/html');
         // grep headers and set to response object
-        foreach ($headers as $i => $h) {
+        foreach ($process->getHttpHeaders() as $i => $h) {
             // set headers defined in sapi headers
             $h = explode(':', $h, 2);
             if (isset($h[1])) {
@@ -265,13 +268,10 @@ class PhpModule implements ModuleInterface
                 $value = trim($h[1]);
                 // if no status, add the header normally
                 if ($key === HttpProtocol::HEADER_STATUS) {
+                    // set status by Status header value which is only used by fcgi sapi's normally
                     $response->setStatus($value);
                 } else {
                     $response->addHeader($key, $value);
-                }
-                // set status header to 301 if location is given
-                if ($key == HttpProtocol::HEADER_LOCATION) {
-                    $response->setStatusCode(301);
                 }
             }
         }
