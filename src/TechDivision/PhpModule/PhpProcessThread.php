@@ -162,6 +162,8 @@ class PhpProcessThread extends \Thread
         }
         // get php output buffer
         if (strlen($outputBuffer = ob_get_clean()) === 0) {
+
+            $errorMessage = '';
             if ($this->lastError['type'] == E_ERROR) {
                 $errorMessage = 'PHP Fatal error: ' . $this->lastError['message'] .
                     ' in ' . $this->lastError['file'] . ' on line ' . $this->lastError['line'];

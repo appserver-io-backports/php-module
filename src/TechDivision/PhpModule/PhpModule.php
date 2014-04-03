@@ -302,6 +302,9 @@ class PhpModule implements ModuleInterface
     protected function initGlobals()
     {
         $request = $this->getRequest();
+
+        // Init the actual globals storage and make sure to generate it anew
+        $this->globals = new PhpGlobals();
         $globals = $this->globals;
 
         // initialize the globals
