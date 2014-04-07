@@ -171,7 +171,7 @@ class PhpProcessThread extends \Thread
         if (strlen($outputBuffer = ob_get_clean()) === 0) {
 
             $errorMessage = '';
-            if ($this->lastError['type'] == E_ERROR) {
+            if ($this->lastError['type'] === E_ERROR || $this->lastError['type'] === E_USER_ERROR) {
                 $errorMessage = 'PHP Fatal error: ' . $this->lastError['message'] .
                     ' in ' . $this->lastError['file'] . ' on line ' . $this->lastError['line'];
             }

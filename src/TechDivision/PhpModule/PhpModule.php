@@ -206,7 +206,7 @@ class PhpModule implements ModuleInterface
             // is not responsible for set correct headers and messages for error's in module context
             if ($lastError = $process->getLastError()) {
                 // check if last error was a fatal one
-                if ($lastError['type'] === E_ERROR) {
+                if ($lastError['type'] === E_ERROR || $lastError['type'] === E_USER_ERROR) {
                     // check if output buffer was set by the application executed by the php process
                     // so do not override content by exception stack trace
                     if (strlen($errorMessage = $process->getOutputBuffer()) === 0) {
