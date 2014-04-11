@@ -105,7 +105,7 @@ class PhpProcessThread extends \Thread
         ob_start();
         // set globals
         $_SERVER = $globals->server;
-        $_ENV = appserver_get_envs();
+        $_ENV = $globals->env;
 
         $_REQUEST = $globals->request;
         $_POST = $globals->post;
