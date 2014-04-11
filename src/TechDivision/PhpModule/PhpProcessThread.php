@@ -105,18 +105,7 @@ class PhpProcessThread extends \Thread
         ob_start();
         // set globals
         $_SERVER = $globals->server;
-        $_ENV = $globals->env;
-
-        // Both $_SERVER and $_ENV have to be available over getenv(), therefor we have to add them within this thread
-        foreach ($_SERVER as $key => $var) {
-
-            putenv($key . '=' . $var);
-        }
-        // Same for the $_ENV array as well
-        foreach ($_ENV as $key => $var) {
-
-            putenv($key . '=' . $var);
-        }
+        $_ENV = appserver_get_envs();
 
         $_REQUEST = $globals->request;
         $_POST = $globals->post;
