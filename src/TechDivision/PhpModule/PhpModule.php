@@ -24,11 +24,11 @@ use TechDivision\Http\HttpProtocol;
 use TechDivision\Http\HttpResponseStates;
 use TechDivision\Http\HttpRequestInterface;
 use TechDivision\Http\HttpResponseInterface;
-use TechDivision\WebServer\Dictionaries\ModuleHooks;
-use TechDivision\WebServer\Dictionaries\ServerVars;
-use TechDivision\WebServer\Interfaces\ModuleInterface;
-use TechDivision\WebServer\Exceptions\ModuleException;
-use TechDivision\WebServer\Interfaces\ServerContextInterface;
+use TechDivision\Server\Dictionaries\ModuleHooks;
+use TechDivision\Server\Dictionaries\ServerVars;
+use TechDivision\Server\Interfaces\ModuleInterface;
+use TechDivision\Server\Exceptions\ModuleException;
+use TechDivision\Server\Interfaces\ServerContextInterface;
 
 /**
  * Class PhpModule
@@ -59,7 +59,7 @@ class PhpModule implements ModuleInterface
     /**
      * Hold's the server's context
      *
-     * @var \TechDivision\WebServer\Interfaces\ServerContextInterface
+     * @var \TechDivision\Server\Interfaces\ServerContextInterface
      */
     protected $serverContext;
 
@@ -94,10 +94,10 @@ class PhpModule implements ModuleInterface
     /**
      * Initiates the module
      *
-     * @param \TechDivision\WebServer\Interfaces\ServerContextInterface $serverContext The server's context instance
+     * @param \TechDivision\Server\Interfaces\ServerContextInterface $serverContext The server's context instance
      *
      * @return bool
-     * @throws \TechDivision\WebServer\Exceptions\ModuleException
+     * @throws \TechDivision\Server\Exceptions\ModuleException
      */
     public function init(ServerContextInterface $serverContext)
     {
@@ -109,7 +109,7 @@ class PhpModule implements ModuleInterface
     /**
      * Return's the server's context
      *
-     * @return \TechDivision\WebServer\Interfaces\ServerContextInterface
+     * @return \TechDivision\Server\Interfaces\ServerContextInterface
      */
     public function getServerContext()
     {
@@ -144,10 +144,11 @@ class PhpModule implements ModuleInterface
      * @param int                                      $hook     The current hook to process logic for
      *
      * @return bool
-     * @throws \TechDivision\WebServer\Exceptions\ModuleException
+     * @throws \TechDivision\Server\Exceptions\ModuleException
      */
     public function process(HttpRequestInterface $request, HttpResponseInterface $response, $hook)
     {
+
         // if false hook is comming do nothing
         if (ModuleHooks::REQUEST_POST !== $hook) {
             return;
@@ -196,6 +197,10 @@ class PhpModule implements ModuleInterface
             // initialize the globals $_SERVER, $_REQUEST, $_POST, $_GET, $_COOKIE, $_FILES and set the headers
             $this->initGlobals();
 
+
+
+            $startTime = microtime(true);
+
             // start new php process
             $process = new PhpProcessThread(
                 $scriptFilename,
@@ -207,6 +212,10 @@ class PhpModule implements ModuleInterface
             $process->start(PTHREADS_INHERIT_ALL | PTHREADS_ALLOW_HEADERS);
             // wait for process to finish
             $process->join();
+
+            $deltaTime = microtime(true) - $startTime;
+
+            echo "$deltaTime secs." . PHP_EOL;
 
             // check if process fatal error occurred so throw module exception because the modules process class
             // is not responsible for set correct headers and messages for error's in module context

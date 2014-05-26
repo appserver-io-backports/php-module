@@ -94,8 +94,10 @@ class PhpProcess
         chdir(dirname($this->scriptFilename));
         // reset headers sent
         appserver_set_headers_sent(false);
+
         // require script filename
         require $this->scriptFilename;
+
         // change dir to old cwd
         chdir($oldCwd);
     }
