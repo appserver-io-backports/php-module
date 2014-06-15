@@ -209,7 +209,7 @@ class PhpModule implements ModuleInterface
             );
 
             // start process
-            $process->start(PTHREADS_INHERIT_ALL | PTHREADS_ALLOW_HEADERS);
+            $process->start(PTHREADS_INHERIT_INI | PTHREADS_INHERIT_CONSTANTS | PTHREADS_ALLOW_HEADERS);
             // wait for process to finish
             $process->join();
 
