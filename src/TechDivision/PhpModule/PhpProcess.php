@@ -60,7 +60,7 @@ class PhpProcess
      * @param \TechDivision\PhpModule\PhpGlobals $globals        The globals instance
      * @param array                              $uploadedFiles  The uploaded files as array
      */
-    public function __construct($scriptFilename, PhpGlobals $globals, array $uploadedFiles = array())
+    public function __construct($scriptFilename, $globals, array $uploadedFiles = array())
     {
         $this->scriptFilename = $scriptFilename;
         $this->globals = $globals;
@@ -81,12 +81,12 @@ class PhpProcess
         // start output buffering
         ob_start();
         // set globals
-        $_SERVER = $globals->server;
-        $_REQUEST = $globals->request;
-        $_POST = $globals->post;
-        $_GET = $globals->get;
-        $_COOKIE = $globals->cookie;
-        $_FILES = $globals->files;
+        $_SERVER = $globals['server'];
+        $_REQUEST = $globals['request'];
+        $_POST = $globals['post'];
+        $_GET = $globals['get'];
+        $_COOKIE = $globals['cookie'];
+        $_FILES = $globals['files'];
 
         // get current working dir for reset after processing
         $oldCwd = getcwd();
@@ -94,25 +94,30 @@ class PhpProcess
         chdir(dirname($this->scriptFilename));
         // reset headers sent
         appserver_set_headers_sent(false);
-
         // require script filename
         require $this->scriptFilename;
-
         // change dir to old cwd
         chdir($oldCwd);
     }
 
     /**
-     * Waits for the process to be finished and provides properties to be set when finished.
+     * Dummy join implementation to be compatible to thread process
      *
      * @return bool
      */
     public function join()
     {
-        // set headers set by script inclusion
-        $this->headers = appserver_get_headers(true);
-        // set output buffer set by script inclusion
-        $this->outputBuffer = ob_get_clean();
+        // do nothing
+    }
+
+    /**
+     * Return's the http response code
+     *
+     * @return int
+     */
+    public function getHttpResponseCode()
+    {
+        return appserver_get_http_response_code();
     }
 
     /**
@@ -122,7 +127,7 @@ class PhpProcess
      */
     public function getOutputBuffer()
     {
-        return $this->outputBuffer;
+        return ob_get_clean();
     }
 
     /**
@@ -130,8 +135,19 @@ class PhpProcess
      *
      * @return array
      */
-    public function getHeaders()
+    public function getHttpHeaders()
     {
-        return $this->headers;
+        return appserver_get_headers(true);
+    }
+
+    /**
+     * Return's last error informations as array got from function error_get_last()
+     *
+     * @return array
+     * @see error_get_last()
+     */
+    public function getLastError()
+    {
+        return error_get_last();
     }
 }

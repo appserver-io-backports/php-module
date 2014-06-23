@@ -80,9 +80,9 @@ class PhpModule implements ModuleInterface
     /**
      * Hold's the globals for php process to call
      *
-     * @var \TechDivision\PhpModule\PhpGlobals
+     * @var array
      */
-    protected $globals;
+    protected $globals = array();
 
     /**
      * Hold's the uploaded filename's
@@ -102,7 +102,6 @@ class PhpModule implements ModuleInterface
     public function init(ServerContextInterface $serverContext)
     {
         $this->serverContext = $serverContext;
-        $this->globals = new PhpGlobals();
         $this->uploadedFiles = array();
     }
 
@@ -148,8 +147,12 @@ class PhpModule implements ModuleInterface
      */
     public function process(HttpRequestInterface $request, HttpResponseInterface $response, $hook)
     {
+        // check if shutdown hook is comming
+        if (ModuleHooks::SHUTDOWN === $hook) {
+            return $this->shutdown($request,  $response);
+        }
 
-        // if false hook is comming do nothing
+        // if wrong hook is comming do nothing
         if (ModuleHooks::REQUEST_POST !== $hook) {
             return;
         }
@@ -197,10 +200,6 @@ class PhpModule implements ModuleInterface
             // initialize the globals $_SERVER, $_REQUEST, $_POST, $_GET, $_COOKIE, $_FILES and set the headers
             $this->initGlobals();
 
-
-
-            $startTime = microtime(true);
-
             // start new php process
             $process = new PhpProcessThread(
                 $scriptFilename,
@@ -209,13 +208,9 @@ class PhpModule implements ModuleInterface
             );
 
             // start process
-            $process->start(PTHREADS_INHERIT_INI | PTHREADS_INHERIT_CONSTANTS | PTHREADS_ALLOW_HEADERS);
+            $process->start(PTHREADS_INHERIT_ALL | PTHREADS_ALLOW_HEADERS);
             // wait for process to finish
             $process->join();
-
-            $deltaTime = microtime(true) - $startTime;
-
-            echo "$deltaTime secs." . PHP_EOL;
 
             // check if process fatal error occurred so throw module exception because the modules process class
             // is not responsible for set correct headers and messages for error's in module context
@@ -273,20 +268,23 @@ class PhpModule implements ModuleInterface
 
         // set per default text/html mimetype
         $response->addHeader(HttpProtocol::HEADER_CONTENT_TYPE, 'text/html');
-        // grep headers and set to response object
-        foreach ($process->getHttpHeaders() as $i => $h) {
-            // set headers defined in sapi headers
-            $h = explode(':', $h, 2);
-            if (isset($h[1])) {
-                // load header key and value
-                $key = trim($h[0]);
-                $value = trim($h[1]);
-                // if no status, add the header normally
-                if ($key === HttpProtocol::HEADER_STATUS) {
-                    // set status by Status header value which is only used by fcgi sapi's normally
-                    $response->setStatus($value);
-                } else {
-                    $response->addHeader($key, $value);
+        // check if headers are given
+        if (is_array($process->getHttpHeaders())) {
+            // grep headers and set to response object
+            foreach ($process->getHttpHeaders() as $i => $h) {
+                // set headers defined in sapi headers
+                $h = explode(':', $h, 2);
+                if (isset($h[1])) {
+                    // load header key and value
+                    $key = trim($h[0]);
+                    $value = trim($h[1]);
+                    // if no status, add the header normally
+                    if ($key === HttpProtocol::HEADER_STATUS) {
+                        // set status by Status header value which is only used by fcgi sapi's normally
+                        $response->setStatus($value);
+                    } else {
+                        $response->addHeader($key, $value);
+                    }
                 }
             }
         }
@@ -319,48 +317,49 @@ class PhpModule implements ModuleInterface
         $request = $this->getRequest();
 
         // Init the actual globals storage and make sure to generate it anew
-        $this->globals = new PhpGlobals();
+        //$this->globals = new PhpGlobals();
+        $this->globals = array();
         $globals = $this->globals;
 
         // initialize the globals
-        $globals->server = $this->getServerContext()->getServerVars();
-        $globals->env = array_merge(
+        $globals['server'] = $this->getServerContext()->getServerVars();
+        $globals['env'] = array_merge(
             $this->getServerContext()->getEnvVars(),
             appserver_get_envs()
         );
-        $globals->request = $request->getParams();
+        $globals['request'] = $request->getParams();
 
         // init post / get. default init vars as GET method case
         if ($this->getServerContext()->getServerVar(ServerVars::REQUEST_METHOD) === HttpProtocol::METHOD_GET) {
             // clear post array
-            $globals->post = array();
+            $globals['post'] = array();
             // set all params to get
-            $globals->get = $request->getParams();
+            $globals['get'] = $request->getParams();
         }
         // check if method post was given
         if ($request->getMethod() === HttpProtocol::METHOD_POST) {
             // set raw request if post method is going on
-            $globals->httpRawPostData = $request->getBodyContent();
+            $globals['httpRawPostData'] = $request->getBodyContent();
             // set params to post
-            $globals->post = $request->getParams();
-            $globals->get = array();
+            $globals['post'] = $request->getParams();
+            $globals['get'] = array();
             // set params given in query string to get if query string exists
             if ($this->getServerContext()->hasServerVar(ServerVars::QUERY_STRING)) {
                 parse_str($this->getServerContext()->getServerVar(ServerVars::QUERY_STRING), $getArray);
-                $globals->get = $getArray;
+                $globals['get'] = $getArray;
             }
         }
         // set cookie globals
-        $globals->cookie = array();
+        $globals['cookie'] = array();
         // iterate all cookies and set them in globals if exists
         if ($cookieHeaderValue = $request->getHeader(HttpProtocol::HEADER_COOKIE)) {
             foreach (explode('; ', $cookieHeaderValue) as $cookieLine) {
                 list ($key, $value) = explode('=', $cookieLine);
-                $globals->cookie[$key] = $value;
+                $globals['cookie'][$key] = $value;
             }
         }
         // set files globals
-        $globals->files = $this->initFileGlobals($request);
+        $globals['files'] = $this->initFileGlobals($request);
     }
 
     /**
@@ -450,5 +449,21 @@ class PhpModule implements ModuleInterface
     public function getModuleName()
     {
         return self::MODULE_NAME;
+    }
+
+    /**
+     * Implement's module shutdown logic
+     *
+     * @param \TechDivision\Http\HttpRequestInterface  $request  The request object
+     * @param \TechDivision\Http\HttpResponseInterface $response The response object
+     *
+     * @return bool
+     * @throws \TechDivision\Server\Exceptions\ModuleException
+     */
+    public function shutdown(HttpRequestInterface $request, HttpResponseInterface $response)
+    {
+        // todo: if non thread process is used than here should be the shutdown handling
+        // if exit/die or fatal error happens in this context so that the worker will be
+        // restarted and the module hook for restart will be called to trigger this function
     }
 }
