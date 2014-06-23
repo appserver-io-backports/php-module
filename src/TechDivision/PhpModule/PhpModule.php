@@ -149,7 +149,7 @@ class PhpModule implements ModuleInterface
     {
         // check if shutdown hook is comming
         if (ModuleHooks::SHUTDOWN === $hook) {
-            return $this->shutdown($request,  $response);
+            return $this->shutdown($request, $response);
         }
 
         // if wrong hook is comming do nothing
