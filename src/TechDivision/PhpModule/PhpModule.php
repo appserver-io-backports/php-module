@@ -136,6 +136,17 @@ class PhpModule implements ModuleInterface
     }
 
     /**
+     * Prepares the module for upcoming request in specific context
+     *
+     * @return bool
+     * @throws \TechDivision\Server\Exceptions\ModuleException
+     */
+    public function prepare()
+    {
+        // nothing to prepare for this module
+    }
+
+    /**
      * Implement's module logic for given hook
      *
      * @param \TechDivision\Http\HttpRequestInterface  $request  The request object
