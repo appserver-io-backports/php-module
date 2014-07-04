@@ -77,11 +77,11 @@ class PhpProcessThread extends \Thread
     /**
      * Constructs the process
      *
-     * @param string $scriptFilename The script filename to execute
-     * @param array  $globals        The globals array
-     * @param array  $uploadedFiles  The uploaded files as array
+     * @param string     $scriptFilename The script filename to execute
+     * @param \Stackable $globals        The globals array access object
+     * @param array      $uploadedFiles  The uploaded files as array
      */
-    public function __construct($scriptFilename, array $globals, array $uploadedFiles = array())
+    public function __construct($scriptFilename, \Stackable $globals, array $uploadedFiles = array())
     {
         $this->scriptFilename = $scriptFilename;
         $this->globals = $globals;
@@ -96,13 +96,11 @@ class PhpProcessThread extends \Thread
     public function run()
     {
         // register shutdown handler
-        //register_shutdown_function(array(&$this, "shutdown"));
+        register_shutdown_function(array(&$this, "shutdown"));
 
         // init globals to local var
         $globals = $this->globals;
 
-        // start output buffering
-        ob_start();
         // set globals
         $_SERVER = $globals['server'];
         $_ENV = $globals['env'];
@@ -130,6 +128,8 @@ class PhpProcessThread extends \Thread
         appserver_set_headers_sent(false);
 
         try {
+            // start output buffering
+            ob_start();
             // require script filename
             require $this->scriptFilename;
         } catch (\Exception $e) {

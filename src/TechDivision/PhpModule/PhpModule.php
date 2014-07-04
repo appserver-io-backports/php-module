@@ -20,6 +20,8 @@
 
 namespace TechDivision\PhpModule;
 
+use TechDivision\Connection\ConnectionRequestInterface;
+use TechDivision\Connection\ConnectionResponseInterface;
 use TechDivision\Http\HttpProtocol;
 use TechDivision\Http\HttpResponseStates;
 use TechDivision\Http\HttpRequestInterface;
@@ -28,6 +30,7 @@ use TechDivision\Server\Dictionaries\ModuleHooks;
 use TechDivision\Server\Dictionaries\ServerVars;
 use TechDivision\Server\Interfaces\ModuleInterface;
 use TechDivision\Server\Exceptions\ModuleException;
+use TechDivision\Server\Interfaces\RequestContextInterface;
 use TechDivision\Server\Interfaces\ServerContextInterface;
 
 /**
@@ -62,6 +65,13 @@ class PhpModule implements ModuleInterface
      * @var \TechDivision\Server\Interfaces\ServerContextInterface
      */
     protected $serverContext;
+
+    /**
+     * Hold's the request's context
+     *
+     * @var \TechDivision\Server\Interfaces\RequestContextInterface
+     */
+    protected $requestContext;
 
     /**
      * Hold's the request instance
@@ -147,17 +157,37 @@ class PhpModule implements ModuleInterface
     }
 
     /**
+     * Return's the request's context instance
+     *
+     * @return \TechDivision\Server\Interfaces\RequestContextInterface
+     */
+    public function getRequestContext()
+    {
+        return $this->requestContext;
+    }
+
+    /**
      * Implement's module logic for given hook
      *
-     * @param \TechDivision\Http\HttpRequestInterface  $request  The request object
-     * @param \TechDivision\Http\HttpResponseInterface $response The response object
-     * @param int                                      $hook     The current hook to process logic for
+     * @param \TechDivision\Connection\ConnectionRequestInterface     $request        A request object
+     * @param \TechDivision\Connection\ConnectionResponseInterface    $response       A response object
+     * @param \TechDivision\Server\Interfaces\RequestContextInterface $requestContext A requests context instance
+     * @param int                                                     $hook           The current hook to process logic for
      *
      * @return bool
      * @throws \TechDivision\Server\Exceptions\ModuleException
      */
-    public function process(HttpRequestInterface $request, HttpResponseInterface $response, $hook)
-    {
+    public function process(
+        ConnectionRequestInterface $request,
+        ConnectionResponseInterface $response,
+        RequestContextInterface $requestContext,
+        $hook
+    ) {
+        // In php an interface is, by definition, a fixed contract. It is immutable.
+        // So we have to declair the right ones afterwards...
+        /** @var $request \TechDivision\Http\HttpRequestInterface */
+        /** @var $request \TechDivision\Http\HttpResponseInterface */
+
         // check if shutdown hook is comming
         if (ModuleHooks::SHUTDOWN === $hook) {
             return $this->shutdown($request, $response);
@@ -168,24 +198,25 @@ class PhpModule implements ModuleInterface
             return;
         }
 
+        // set request context as member ref
+        $this->requestContext = $requestContext;
+
         // set req and res internally
         $this->request = $request;
         $this->response = $response;
-        // get server context to local var
-        $serverContext = $this->getServerContext();
 
         // check if server handler sais php modules should react on this request as file handler
-        if ($serverContext->getServerVar(ServerVars::SERVER_HANDLER) === self::MODULE_NAME) {
+        if ($requestContext->getServerVar(ServerVars::SERVER_HANDLER) === self::MODULE_NAME) {
 
             // check if file does not exist
-            if (!$serverContext->hasServerVar(ServerVars::SCRIPT_FILENAME)) {
+            if (!$requestContext->hasServerVar(ServerVars::SCRIPT_FILENAME)) {
                 // send 404
                 $response->setStatusCode(404);
                 throw new ModuleException(null, 404);
             }
 
             // init script filename var
-            $scriptFilename = $serverContext->getServerVar(ServerVars::SCRIPT_FILENAME);
+            $scriptFilename = $requestContext->getServerVar(ServerVars::SCRIPT_FILENAME);
 
             /**
              * Check if script name exists on filesystem
@@ -308,13 +339,13 @@ class PhpModule implements ModuleInterface
      */
     protected function prepareServerVars()
     {
-        $serverContext = $this->getServerContext();
+        $requestContext = $this->getRequestContext();
         // init php self server var
-        $phpSelf = $serverContext->getServerVar(ServerVars::SCRIPT_NAME);
-        if ($serverContext->hasServerVar(ServerVars::PATH_INFO)) {
-            $phpSelf .= $serverContext->getServerVar(ServerVars::PATH_INFO);
+        $phpSelf = $requestContext->getServerVar(ServerVars::SCRIPT_NAME);
+        if ($requestContext->hasServerVar(ServerVars::PATH_INFO)) {
+            $phpSelf .= $requestContext->getServerVar(ServerVars::PATH_INFO);
         }
-        $serverContext->setServerVar(self::SERVER_VAR_PHP_SELF, $phpSelf);
+        $requestContext->setServerVar(self::SERVER_VAR_PHP_SELF, $phpSelf);
     }
 
     /**
@@ -326,22 +357,22 @@ class PhpModule implements ModuleInterface
     protected function initGlobals()
     {
         $request = $this->getRequest();
+        $requestContext = $this->getRequestContext();
 
         // Init the actual globals storage and make sure to generate it anew
-        //$this->globals = new PhpGlobals();
-        $this->globals = array();
+        $this->globals = new PhpGlobals();
         $globals = $this->globals;
 
         // initialize the globals
-        $globals['server'] = $this->getServerContext()->getServerVars();
+        $globals['server'] = $requestContext->getServerVars();
         $globals['env'] = array_merge(
-            $this->getServerContext()->getEnvVars(),
+            (array)$requestContext->getEnvVars(),
             appserver_get_envs()
         );
         $globals['request'] = $request->getParams();
 
         // init post / get. default init vars as GET method case
-        if ($this->getServerContext()->getServerVar(ServerVars::REQUEST_METHOD) === HttpProtocol::METHOD_GET) {
+        if ($requestContext->getServerVar(ServerVars::REQUEST_METHOD) === HttpProtocol::METHOD_GET) {
             // clear post array
             $globals['post'] = array();
             // set all params to get
@@ -355,20 +386,21 @@ class PhpModule implements ModuleInterface
             $globals['post'] = $request->getParams();
             $globals['get'] = array();
             // set params given in query string to get if query string exists
-            if ($this->getServerContext()->hasServerVar(ServerVars::QUERY_STRING)) {
-                parse_str($this->getServerContext()->getServerVar(ServerVars::QUERY_STRING), $getArray);
+            if ($requestContext->hasServerVar(ServerVars::QUERY_STRING)) {
+                parse_str($requestContext->getServerVar(ServerVars::QUERY_STRING), $getArray);
                 $globals['get'] = $getArray;
             }
         }
         // set cookie globals
-        $globals['cookie'] = array();
+        $cookies = array();
         // iterate all cookies and set them in globals if exists
         if ($cookieHeaderValue = $request->getHeader(HttpProtocol::HEADER_COOKIE)) {
-            foreach (explode('; ', $cookieHeaderValue) as $cookieLine) {
+            foreach (explode(';', $cookieHeaderValue) as $cookieLine) {
                 list ($key, $value) = explode('=', $cookieLine);
-                $globals['cookie'][$key] = $value;
+                $cookies[trim($key)] = trim($value);
             }
         }
+        $globals['cookie'] = $cookies;
         // set files globals
         $globals['files'] = $this->initFileGlobals($request);
     }
