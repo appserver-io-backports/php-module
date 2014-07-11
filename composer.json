@@ -14,8 +14,7 @@
     ],
     "require": {
         "php": ">=5.4.0",
-        "techdivision/http": "0.1.*",
-        "techdivision/webserver": "0.2.*"
+        "techdivision/http": "0.1.*"
     },
     "autoload": {
         "psr-0": {
