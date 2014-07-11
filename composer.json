@@ -4,7 +4,6 @@
     "homepage": "https://github.com/techdivision/TechDivision_PhpModule",
     "keywords": ["php", "module", "webserver"],
     "license": ["OSL-3.0"],
-    "minimum-stability": "dev",
     "authors": [
         {
             "name": "Johann Zelger",
@@ -15,11 +14,13 @@
     ],
     "require": {
         "php": ">=5.4.0",
-        "techdivision/http": "dev-master",
-        "techdivision/webserver": "dev-master"
+        "techdivision/http": "0.1.*",
+        "techdivision/webserver": "0.2.*"
     },
     "autoload": {
-        "psr-0": {"TechDivision": ["src/", "tests/"]}
+        "psr-0": {
+            "TechDivision\\PhpModule": ["src/", "tests/"]      
+        }
     },
     "config":{
         "github-oauth":{
